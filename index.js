@@ -1,5 +1,6 @@
 const express = require('express')
 const MongoClient = require('mongodb').MongoClient;
+const ObjectID = require('mongodb').ObjectID;
 const cors = require('cors')
 require('dotenv').config();
 
@@ -17,8 +18,26 @@ const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology:
 client.connect(err => {
     console.log('connect error', err)
   const productCollection = client.db("techworld").collection("techinfo");
+  const orderCollection = client.db("techworld").collection("order");
   console.log('mongodb connected successfully')
 
+  app.get('/orderedProduct', (req, res) => {
+    orderCollection.find({email: req.query.email})
+    .toArray((err, items) => {
+      console.log('order', items)
+      res.send(items)
+  })
+  })
+
+  app.post('/adOrder', (req, res) => {
+    const newOrder = req.body;
+    console.log(newOrder)
+    orderCollection.insertOne(newOrder)
+    .then(result => {
+        res.send(result.insertedCount > 0);
+    })
+  })
+  
   app.get('/products', (req, res) => {
     productCollection.find()
     .toArray((err, items) => {
@@ -33,11 +52,18 @@ client.connect(err => {
     .then(result => {
       res.send( {count: result.insertedCount} )
     })
-   
   })
 
+  app.delete('/deleteProduct/:id', (req, res) => {
+    const id = ObjectID(req.params.id);
+    console.log('delete this', id);
+    productCollection.findOneAndDelete({_id: id})
+    .then(documents => res.send(!!documents.value))
+})
+
 });
-const pass = 'VZGKVEoZNAFOfqD7'
+
+
 app.get('/', (req, res) => {
   res.send('Hello World!')
 })
